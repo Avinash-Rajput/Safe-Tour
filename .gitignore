@@ -1,0 +1,23 @@
+# Flutter
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/build/
+mobile/google-services.json
+
+# Python
+backend/.env
+backend/firebase-service-account.json
+backend/__pycache__/
+backend/*.pyc
+backend/.venv/
+backend/venv/
+
+# Node
+web-viewer/node_modules/
+web-viewer/.next/
+web-viewer/.env.local
+
+# General
+.DS_Store
+*.log
