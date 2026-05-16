@@ -12,3 +12,4 @@ httpx
 twilio
 praw
 python-multipart
+aiosqlite
