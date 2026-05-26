@@ -6,6 +6,6 @@ void main() {
   testWidgets('SafeTourApp renders', (WidgetTester tester) async {
     await tester.pumpWidget(const ProviderScope(child: SafeTourApp()));
     await tester.pumpAndSettle();
-    expect(find.text('Sign In Screen'), findsOneWidget);
+    expect(find.text('SafeTour'), findsOneWidget);
   });
 }
