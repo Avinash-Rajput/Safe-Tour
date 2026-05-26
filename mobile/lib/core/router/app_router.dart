@@ -26,14 +26,13 @@ class GoRouterRefreshStream extends ChangeNotifier {
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
-
   return GoRouter(
     initialLocation: '/signin',
     // Listening to the auth stream changes to trigger redirect checks dynamically.
     refreshListenable: GoRouterRefreshStream(ref.watch(authStateProvider.stream)),
     redirect: (context, state) {
       // Grab current auth value
+      final authState = ref.read(authStateProvider);
       final user = authState.valueOrNull;
       final isLoggingIn = state.matchedLocation == '/signin';
 

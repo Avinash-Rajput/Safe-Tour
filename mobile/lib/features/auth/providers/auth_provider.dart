@@ -64,6 +64,8 @@ class AuthService {
         return 'Google sign-in failed. Please try again.';
       case 'sign_in_required':
         return 'Please choose a Google account to continue.';
+      case 'sign_in_canceled':
+        return 'Google sign-in was canceled.';
       default:
         return 'Unable to sign in with Google right now. Please try again.';
     }

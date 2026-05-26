@@ -23,9 +23,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       final credential = await ref.read(authServiceProvider).signInWithGoogle();
       if (credential == null) {
         // Sign-in cancelled by user, stop loading without showing error
-        setState(() {
-          _isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
         return;
       }
       // On success, the GoRouter refreshListenable redirect will automatically
