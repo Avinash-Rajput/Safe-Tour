@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -27,9 +28,44 @@ class AuthService {
       );
 
       return await _auth.signInWithCredential(credential);
-    } catch (e) {
-      // Do not expose e.toString() directly to avoid showing technical details
-      throw Exception('Failed to sign in. Please verify your internet connection and try again.');
+    } on FirebaseAuthException catch (e) {
+      throw Exception(_mapFirebaseAuthError(e.code));
+    } on PlatformException catch (e) {
+      throw Exception(_mapGoogleSignInError(e.code));
+    } catch (_) {
+      throw Exception('Failed to sign in. Please try again.');
+    }
+  }
+
+  String _mapFirebaseAuthError(String code) {
+    switch (code) {
+      case 'network-request-failed':
+        return 'Network error. Please check your internet connection and try again.';
+      case 'user-disabled':
+        return 'This account has been disabled. Please contact support.';
+      case 'account-exists-with-different-credential':
+        return 'An account already exists with a different sign-in method.';
+      case 'invalid-credential':
+        return 'Invalid sign-in credentials. Please try again.';
+      case 'operation-not-allowed':
+        return 'Google sign-in is currently unavailable. Please try again later.';
+      case 'too-many-requests':
+        return 'Too many attempts. Please wait a moment and try again.';
+      default:
+        return 'Unable to sign in right now. Please try again.';
+    }
+  }
+
+  String _mapGoogleSignInError(String code) {
+    switch (code) {
+      case 'network_error':
+        return 'Network error. Please check your internet connection and try again.';
+      case 'sign_in_failed':
+        return 'Google sign-in failed. Please try again.';
+      case 'sign_in_required':
+        return 'Please choose a Google account to continue.';
+      default:
+        return 'Unable to sign in with Google right now. Please try again.';
     }
   }
 
