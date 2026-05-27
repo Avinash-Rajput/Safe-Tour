@@ -7,6 +7,47 @@ import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 
+class Country {
+  final String name;
+  final String isoCode;
+  final String dialingCode;
+  final String? validationRegExp;
+
+  const Country({
+    required this.name,
+    required this.isoCode,
+    required this.dialingCode,
+    this.validationRegExp,
+  });
+}
+
+// Rich list of international countries
+const List<Country> countriesList = [
+  Country(name: 'India', isoCode: 'IN', dialingCode: '+91', validationRegExp: r'^[6-9]\d{9}$'),
+  Country(name: 'United States', isoCode: 'US', dialingCode: '+1', validationRegExp: r'^\d{10}$'),
+  Country(name: 'United Kingdom', isoCode: 'GB', dialingCode: '+44', validationRegExp: r'^7\d{9}$'),
+  Country(name: 'Australia', isoCode: 'AU', dialingCode: '+61', validationRegExp: r'^4\d{8}$'),
+  Country(name: 'Germany', isoCode: 'DE', dialingCode: '+49', validationRegExp: r'^1[5-7]\d{8,9}$'),
+  Country(name: 'France', isoCode: 'FR', dialingCode: '+33', validationRegExp: r'^6\d{8}$'),
+  Country(name: 'Canada', isoCode: 'CA', dialingCode: '+1', validationRegExp: r'^\d{10}$'),
+  Country(name: 'Singapore', isoCode: 'SG', dialingCode: '+65', validationRegExp: r'^[89]\d{7}$'),
+  Country(name: 'Japan', isoCode: 'JP', dialingCode: '+81', validationRegExp: r'^[789]0\d{8}$'),
+  Country(name: 'United Arab Emirates', isoCode: 'AE', dialingCode: '+971', validationRegExp: r'^5[0256]\d{7}$'),
+  Country(name: 'Saudi Arabia', isoCode: 'SA', dialingCode: '+966', validationRegExp: r'^5\d{8}$'),
+  Country(name: 'South Africa', isoCode: 'ZA', dialingCode: '+27', validationRegExp: r'^[678]\d{8}$'),
+  Country(name: 'Brazil', isoCode: 'BR', dialingCode: '+55', validationRegExp: r'^[1-9]{2}9\d{8}$'),
+  Country(name: 'New Zealand', isoCode: 'NZ', dialingCode: '+64', validationRegExp: r'^2\d{7,9}$'),
+  Country(name: 'Netherlands', isoCode: 'NL', dialingCode: '+31', validationRegExp: r'^6\d{8}$'),
+  Country(name: 'Spain', isoCode: 'ES', dialingCode: '+34', validationRegExp: r'^[67]\d{8}$'),
+  Country(name: 'Italy', isoCode: 'IT', dialingCode: '+39', validationRegExp: r'^3\d{9}$'),
+  Country(name: 'Switzerland', isoCode: 'CH', dialingCode: '+41', validationRegExp: r'^7[5-9]\d{7}$'),
+  Country(name: 'Sweden', isoCode: 'SE', dialingCode: '+46', validationRegExp: r'^7[02369]\d{7}$'),
+  Country(name: 'Norway', isoCode: 'NO', dialingCode: '+47', validationRegExp: r'^[49]\d{7}$'),
+  Country(name: 'Denmark', isoCode: 'DK', dialingCode: '+45', validationRegExp: r'^[2-9]\d{7}$'),
+  Country(name: 'Finland', isoCode: 'FI', dialingCode: '+358', validationRegExp: r'^(457|4[0-9]|50)\d{6,7}$'),
+  Country(name: 'Ireland', isoCode: 'IE', dialingCode: '+353', validationRegExp: r'^8[3-9]\d{7}$'),
+];
+
 class PhoneSignInScreen extends ConsumerStatefulWidget {
   const PhoneSignInScreen({super.key});
 
@@ -23,13 +64,14 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
   bool _isLoading = false;
   String? _verificationId;
   String _phoneNumber = "";
+  String _searchQuery = "";
+  
+  // Default country = India (+91)
+  Country _selectedCountry = countriesList[0];
   
   // Resend Timer
   Timer? _timer;
   int _timerSeconds = 60;
-  
-  // RegEx for Indian mobile number (without prefix): starting with 6-9 and exactly 10 digits
-  final RegExp _phoneRegExp = RegExp(r'^[6-9]\d{9}$');
   bool _isPhoneValid = false;
 
   @override
@@ -39,12 +81,33 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
   }
 
   void _onPhoneChanged() {
-    final valid = _phoneRegExp.hasMatch(_phoneController.text);
+    final valid = _validatePhoneNumber(_phoneController.text, _selectedCountry);
     if (valid != _isPhoneValid) {
       setState(() {
         _isPhoneValid = valid;
       });
     }
+  }
+
+  bool _validatePhoneNumber(String phoneNumber, Country country) {
+    if (phoneNumber.isEmpty) return false;
+    
+    // Check digits only
+    final digitsOnly = RegExp(r'^\d+$');
+    if (!digitsOnly.hasMatch(phoneNumber)) return false;
+
+    if (country.validationRegExp != null) {
+      return RegExp(country.validationRegExp!).hasMatch(phoneNumber);
+    } else {
+      // Fallback general validation
+      return phoneNumber.length >= 6 && phoneNumber.length <= 15;
+    }
+  }
+
+  String _getCountryFlag(String countryCode) {
+    final int firstLetter = countryCode.codeUnitAt(0) - 0x41 + 0x1F1E6;
+    final int secondLetter = countryCode.codeUnitAt(1) - 0x41 + 0x1F1E6;
+    return String.fromCharCode(firstLetter) + String.fromCharCode(secondLetter);
   }
 
   void _startTimer() {
@@ -68,22 +131,19 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
     
     setState(() {
       _isLoading = true;
-      _phoneNumber = '+91${_phoneController.text}';
+      _phoneNumber = '${_selectedCountry.dialingCode}${_phoneController.text}';
     });
 
     try {
       await ref.read(authServiceProvider).signInWithPhone(
         phoneNumber: _phoneNumber,
         verificationCompleted: (credential) async {
-          // Auto-retrieval completed, sign in
           try {
             await ref.read(authServiceProvider).verifyOTP(
               verificationId: _verificationId ?? "",
               smsCode: credential.smsCode ?? "",
             );
-          } catch (_) {
-            // Ignore auto-retrieval failure here
-          }
+          } catch (_) {}
         },
         verificationFailed: (exception) {
           setState(() {
@@ -98,7 +158,6 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
             _isLoading = false;
           });
           _startTimer();
-          // Focus first OTP field
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _otpFocusNodes[0].requestFocus();
           });
@@ -129,7 +188,6 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
         smsCode: otp,
       );
       
-      // On success, navigate to /home
       if (mounted) {
         context.go('/home');
       }
@@ -138,7 +196,6 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
         _isLoading = false;
       });
       _showError(e.toString().replaceFirst('Exception: ', ''));
-      // Clear OTP inputs on failure
       for (var controller in _otpControllers) {
         controller.clear();
       }
@@ -155,6 +212,134 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
+    );
+  }
+
+  void _showCountryPicker() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateSheet) {
+            final query = _searchQuery.toLowerCase();
+            final filtered = countriesList.where((c) {
+              return c.name.toLowerCase().contains(query) ||
+                     c.isoCode.toLowerCase().contains(query) ||
+                     c.dialingCode.contains(query);
+            }).toList();
+
+            return DraggableScrollableSheet(
+              initialChildSize: 0.7,
+              minChildSize: 0.5,
+              maxChildSize: 0.95,
+              builder: (context, scrollController) {
+                return Container(
+                  decoration: const BoxDecoration(
+                    color: AppTheme.surface,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 8),
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Select Country',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppTheme.background,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.1),
+                            ),
+                          ),
+                          child: TextField(
+                            style: const TextStyle(color: Colors.white),
+                            onChanged: (val) {
+                              setStateSheet(() {
+                                _searchQuery = val;
+                              });
+                            },
+                            decoration: const InputDecoration(
+                              prefixIcon: Icon(Icons.search, color: Colors.grey),
+                              hintText: 'Search country name or code...',
+                              hintStyle: TextStyle(color: Colors.grey),
+                              border: InputBorder.none,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: ListView.builder(
+                          controller: scrollController,
+                          itemCount: filtered.length,
+                          itemBuilder: (context, index) {
+                            final country = filtered[index];
+                            final isSelected = country.isoCode == _selectedCountry.isoCode;
+                            return ListTile(
+                              leading: Text(
+                                _getCountryFlag(country.isoCode),
+                                style: const TextStyle(fontSize: 24),
+                              ),
+                              title: Text(
+                                country.name,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    country.dialingCode,
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.6),
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  if (isSelected) ...[
+                                    const SizedBox(width: 12),
+                                    const Icon(Icons.check, color: AppTheme.primary),
+                                  ],
+                                ],
+                              ),
+                              onTap: () {
+                                setState(() {
+                                  _selectedCountry = country;
+                                  _searchQuery = "";
+                                });
+                                _onPhoneChanged();
+                                Navigator.pop(context);
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 
@@ -185,7 +370,6 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
               setState(() {
                 _isOtpSent = false;
                 _verificationId = null;
-                // Clear controllers
                 for (var controller in _otpControllers) {
                   controller.clear();
                 }
@@ -233,7 +417,7 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
         ),
         const SizedBox(height: 40),
         
-        // Input with prefix +91
+        // Searchable Country Dial Code Dropdown + Phone Input Field
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           decoration: BoxDecoration(
@@ -248,15 +432,33 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
           ),
           child: Row(
             children: [
-              const Text(
-                '+91',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              GestureDetector(
+                onTap: _showCountryPicker,
+                behavior: HitTestBehavior.opaque,
+                child: Row(
+                  children: [
+                    Text(
+                      _getCountryFlag(_selectedCountry.isoCode),
+                      style: const TextStyle(fontSize: 22),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _selectedCountry.dialingCode,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.arrow_drop_down,
+                      color: Colors.white.withOpacity(0.7),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Container(
                 height: 24,
                 width: 1,
@@ -274,10 +476,10 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
                   ),
                   inputFormatters: [
                     FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(10),
+                    LengthLimitingTextInputFormatter(15),
                   ],
                   decoration: const InputDecoration(
-                    hintText: 'Enter 10-digit number',
+                    hintText: 'Enter phone number',
                     hintStyle: TextStyle(color: Colors.grey, fontSize: 16),
                     border: InputBorder.none,
                     counterText: '',
@@ -289,7 +491,6 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
         ),
         const Spacer(),
         
-        // Submit button
         SizedBox(
           width: double.infinity,
           height: 52,
@@ -361,57 +562,69 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
         ),
         const SizedBox(height: 40),
         
-        // 6 digits boxes
+        // 6 digit boxes with KeyboardListener backspace support
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: List.generate(6, (index) {
             return SizedBox(
               width: 48,
               height: 56,
-              child: TextField(
-                controller: _otpControllers[index],
+              child: KeyboardListener(
                 focusNode: _otpFocusNodes[index],
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(1),
-                ],
-                onChanged: (value) {
-                  if (value.isNotEmpty) {
-                    if (index < 5) {
-                      _otpFocusNodes[index + 1].requestFocus();
+                onKeyEvent: (event) {
+                  final isBackspace = event.logicalKey == LogicalKeyboardKey.backspace;
+                  if (isBackspace && (event is KeyDownEvent || event.runtimeType.toString().contains('KeyDown'))) {
+                    if (_otpControllers[index].text.isNotEmpty) {
+                      _otpControllers[index].clear();
                     } else {
-                      _otpFocusNodes[index].unfocus();
-                      _verifyOtp();
-                    }
-                  } else {
-                    if (index > 0) {
-                      _otpFocusNodes[index - 1].requestFocus();
+                      if (index > 0) {
+                        _otpFocusNodes[index - 1].requestFocus();
+                        _otpControllers[index - 1].clear();
+                      }
                     }
                   }
                 },
-                decoration: InputDecoration(
-                  fillColor: AppTheme.surface,
-                  filled: true,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(
-                      color: Colors.white.withOpacity(0.1),
-                      width: 1.5,
-                    ),
+                child: TextField(
+                  controller: _otpControllers[index],
+                  focusNode: _otpFocusNodes[index],
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(
-                      color: AppTheme.primary,
-                      width: 2.0,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(1),
+                  ],
+                  onChanged: (value) {
+                    if (value.isNotEmpty) {
+                      if (index < 5) {
+                        _otpFocusNodes[index + 1].requestFocus();
+                      } else {
+                        _otpFocusNodes[index].unfocus();
+                        _verifyOtp();
+                      }
+                    }
+                  },
+                  decoration: InputDecoration(
+                    fillColor: AppTheme.surface,
+                    filled: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                        color: Colors.white.withOpacity(0.1),
+                        width: 1.5,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(
+                        color: AppTheme.primary,
+                        width: 2.0,
+                      ),
                     ),
                   ),
                 ),
@@ -421,7 +634,6 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
         ),
         const SizedBox(height: 32),
         
-        // Countdown resend timer
         Center(
           child: _timerSeconds > 0
               ? Text(
@@ -446,7 +658,6 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
         
         const Spacer(),
         
-        // Manual verification button
         SizedBox(
           width: double.infinity,
           height: 52,
