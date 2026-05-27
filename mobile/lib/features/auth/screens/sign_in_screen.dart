@@ -12,34 +12,10 @@ class SignInScreen extends ConsumerStatefulWidget {
   ConsumerState<SignInScreen> createState() => _SignInScreenState();
 }
 
-class _SignInScreenState extends ConsumerState<SignInScreen> with SingleTickerProviderStateMixin {
+class _SignInScreenState extends ConsumerState<SignInScreen> {
   bool _isLoading = false;
-  late AnimationController _fadeController;
-  late Animation<double> _fadeAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _fadeController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOutCubic,
-    );
-    _fadeController.forward();
-  }
-
-  @override
-  void dispose() {
-    _fadeController.dispose();
-    super.dispose();
-  }
 
   Future<void> _handleGoogleSignIn() async {
-    if (_isLoading) return;
-    
     setState(() {
       _isLoading = true;
     });
@@ -47,6 +23,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> with SingleTickerPr
     try {
       final credential = await ref.read(authServiceProvider).signInWithGoogle();
       if (credential == null) {
+        // Sign-in cancelled by user, stop loading without showing error
         if (mounted) {
           setState(() {
             _isLoading = false;
@@ -54,6 +31,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> with SingleTickerPr
         }
         return;
       }
+      // On success, the GoRouter refreshListenable redirect will automatically
+      // navigate to /home. We still check if mounted before updating state just in case.
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -65,17 +44,18 @@ class _SignInScreenState extends ConsumerState<SignInScreen> with SingleTickerPr
           _isLoading = false;
         });
         
+        // Error message constraint: never expose technical details to user
         final errorMessage = e.toString().replaceFirst('Exception: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               errorMessage,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+              style: const TextStyle(color: Colors.white),
             ),
             backgroundColor: AppTheme.danger,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8),
             ),
           ),
         );
@@ -87,431 +67,309 @@ class _SignInScreenState extends ConsumerState<SignInScreen> with SingleTickerPr
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
-      body: Stack(
-        children: [
-          // Glowing Radial Background Canvas
-          const Positioned.fill(
-            child: GlowingBackground(),
-          ),
-          
-          SafeArea(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 28.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const Spacer(flex: 3),
-                    
-                    // Stylish floating travel-safety hero icon
-                    const Center(
-                      child: OnboardingHeroIcon(),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Spacer(),
+              
+              // Glowing shield icon inside a green circle
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppTheme.primary.withOpacity(0.08),
+                    border: Border.all(
+                      color: AppTheme.primary.withOpacity(0.2),
+                      width: 2,
                     ),
-                    const SizedBox(height: 36),
-                    
-                    // Premium "Safe Tour" typography
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
-                          'Safe ',
-                          style: TextStyle(
-                            fontSize: 36,
-                            fontWeight: FontWeight.w300,
-                            color: Colors.white,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                        Text(
-                          'Tour',
-                          style: TextStyle(
-                            fontSize: 36,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primary,
-                            letterSpacing: 1.5,
-                            shadows: [
-                              Shadow(
-                                color: AppTheme.primary.withOpacity(0.4),
-                                blurRadius: 15,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    
-                    // High-end subtitle for international tourists
-                    Text(
-                      'Your Global Security & Travel Companion',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white.withOpacity(0.55),
-                        letterSpacing: 0.6,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primary.withOpacity(0.15),
+                        blurRadius: 30,
+                        spreadRadius: 8,
+                      ),
+                    ],
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [AppTheme.primary, Color(0xFF388E3C)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
                     ),
-                    
-                    const Spacer(flex: 4),
-                    
-                    // Elegant bottom onboarding card
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 128,
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    CircularProgressIndicator(
-                                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
-                                      strokeWidth: 3.5,
-                                    ),
-                                    SizedBox(height: 16),
-                                    Text(
-                                      'Connecting securely...',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey,
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                    child: const Icon(
+                      Icons.shield,
+                      size: 68,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+              
+              // SafeTour Title Text with premium typography and spacing
+              const Text(
+                'SafeTour',
+                style: TextStyle(
+                  fontSize: 38,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 2.0,
+                ),
+              ),
+              const SizedBox(height: 8),
+              
+              // Subtitle
+              Text(
+                'Your Premium Security & Travel Companion',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.white.withOpacity(0.6),
+                  letterSpacing: 0.5,
+                ),
+              ),
+              
+              const Spacer(),
+              
+              // Loading Spinner or Button layer
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 54,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                            strokeWidth: 3,
+                          ),
+                        ),
+                      )
+                      : Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            PremiumInteractiveScale(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.12),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
                                     ),
                                   ],
                                 ),
-                              ),
-                            )
-                          : Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Google Sign-In with Tactile Animation
-                                TactileButton(
-                                  onTap: _handleGoogleSignIn,
-                                  child: Container(
-                                    width: double.infinity,
-                                    height: 56,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(16),
-                                      gradient: const LinearGradient(
-                                        colors: [Colors.white, Color(0xFFF5F5F5)],
+                                child: ElevatedButton(
+                                  onPressed: _handleGoogleSignIn,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: Colors.black,
+                                    minimumSize: const Size(double.infinity, 54),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      CustomPaint(
+                                        size: const Size(20, 20),
+                                        painter: GoogleGLogoPainter(),
                                       ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.15),
-                                          blurRadius: 15,
-                                          offset: const Offset(0, 4),
+                                      const SizedBox(width: 12),
+                                      const Text(
+                                        'Sign in with Google',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black87,
+                                          letterSpacing: 0.1,
                                         ),
-                                      ],
-                                    ),
-                                    child: Center(
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          CustomPaint(
-                                            size: const Size(22, 22),
-                                            painter: GoogleGLogoPainter(),
-                                          ),
-                                          const SizedBox(width: 14),
-                                          const Text(
-                                            'Sign in with Google',
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w600,
-                                              color: Color(0xFF212121),
-                                              letterSpacing: 0.2,
-                                            ),
-                                          ),
-                                        ],
                                       ),
-                                    ),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(height: 16),
-                                
-                                // Phone Sign-In with Tactile Animation
-                                TactileButton(
-                                  onTap: () => context.push('/phone-signin'),
-                                  child: Container(
-                                    width: double.infinity,
-                                    height: 56,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(
-                                        color: Colors.white.withOpacity(0.12),
-                                        width: 1.5,
-                                      ),
-                                      color: Colors.white.withOpacity(0.04),
-                                    ),
-                                    child: const Center(
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(Icons.phone_iphone_rounded, size: 22, color: Colors.white),
-                                          SizedBox(width: 14),
-                                          Text(
-                                            'Sign in with Phone Number',
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.white,
-                                              letterSpacing: 0.2,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
-                    ),
-                    const SizedBox(height: 36),
-                  ],
-                ),
+                            const SizedBox(height: 16),
+                            PremiumInteractiveScale(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.15),
+                                    width: 1.2,
+                                  ),
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: () => context.push('/phone-signin'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    foregroundColor: Colors.white,
+                                    minimumSize: const Size(double.infinity, 54),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.phone_android, size: 20, color: Colors.white),
+                                      SizedBox(width: 12),
+                                      Text(
+                                        'Sign in with Phone Number',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                          letterSpacing: 0.1,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class GlowingBackground extends StatelessWidget {
-  const GlowingBackground({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: Container(color: AppTheme.background),
-        ),
-        // Top-right radial glow
-        Positioned(
-          top: -150,
-          right: -150,
-          width: 500,
-          height: 500,
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.primary.withOpacity(0.07),
-                  blurRadius: 100,
-                  spreadRadius: 50,
-                ),
-              ],
-            ),
-          ),
-        ),
-        // Bottom-left radial glow
-        Positioned(
-          bottom: -200,
-          left: -200,
-          width: 600,
-          height: 600,
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF1B5E20).withOpacity(0.04),
-                  blurRadius: 120,
-                  spreadRadius: 60,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class OnboardingHeroIcon extends StatelessWidget {
-  const OnboardingHeroIcon({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        // Outer glowing ring
-        Container(
-          width: 140,
-          height: 140,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppTheme.primary.withOpacity(0.03),
-            border: Border.all(
-              color: AppTheme.primary.withOpacity(0.1),
-              width: 1.5,
-            ),
-          ),
-        ),
-        // Secondary decorative rotating boundary
-        Container(
-          width: 110,
-          height: 110,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: Colors.white.withOpacity(0.06),
-              width: 1.2,
-            ),
-          ),
-          child: const Padding(
-            padding: EdgeInsets.all(4.0),
-            child: CircularProgressIndicator(
-              value: 0.65,
-              strokeWidth: 1.5,
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white10),
-            ),
-          ),
-        ),
-        // Central icon container
-        Container(
-          width: 82,
-          height: 82,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: const LinearGradient(
-              colors: [
-                Color(0xFF2E7D32),
-                Color(0xFF1B5E20),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.primary.withOpacity(0.25),
-                blurRadius: 20,
-                spreadRadius: 2,
-                offset: const Offset(0, 4),
-              ),
+              
+              const SizedBox(height: 48),
             ],
           ),
-          child: const Icon(
-            Icons.shield_outlined,
-            size: 38,
-            color: Colors.white,
-          ),
         ),
-        // Airplane accent flying over the shield
-        Positioned(
-          top: 28,
-          right: 28,
-          child: Transform.rotate(
-            angle: 0.6,
-            child: Icon(
-              Icons.airplanemode_active_rounded,
-              size: 20,
-              color: Colors.white.withOpacity(0.85),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class TactileButton extends StatefulWidget {
-  final VoidCallback? onTap;
-  final Widget child;
-
-  const TactileButton({super.key, this.onTap, required this.child});
-
-  @override
-  State<TactileButton> createState() => _TactileButtonState();
-}
-
-class _TactileButtonState extends State<TactileButton> {
-  double _scale = 1.0;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) {
-        if (widget.onTap != null) {
-          setState(() {
-            _scale = 0.96;
-          });
-        }
-      },
-      onTapUp: (_) {
-        if (widget.onTap != null) {
-          setState(() {
-            _scale = 1.0;
-          });
-        }
-      },
-      onTapCancel: () {
-        if (widget.onTap != null) {
-          setState(() {
-            _scale = 1.0;
-          });
-        }
-      },
-      onTap: widget.onTap,
-      child: AnimatedScale(
-        scale: _scale,
-        duration: const Duration(milliseconds: 100),
-        curve: Curves.easeOutCubic,
-        child: widget.child,
       ),
     );
   }
 }
 
+/// CustomPainter to render an extremely precise and crisp vector Google 'G' logo
 class GoogleGLogoPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final double cx = size.width / 2;
-    final double cy = size.height / 2;
-    final double r = size.width / 2;
-    final double strokeWidth = size.width * 0.22;
-    final double innerRadius = r - strokeWidth / 2;
-    final Rect innerRect = Rect.fromCircle(center: Offset(cx, cy), radius: innerRadius);
+    final double s = size.width / 24;
     
-    final Paint paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.butt
-      ..isAntiAlias = true;
-
-    // Draw Red Segment (Top Arc)
-    paint.color = const Color(0xFFEA4335);
-    canvas.drawArc(innerRect, -2.8, 1.4, false, paint);
-
-    // Draw Yellow Segment (Left Arc)
-    paint.color = const Color(0xFFFBBC05);
-    canvas.drawArc(innerRect, -4.2, 1.4, false, paint);
-
-    // Draw Green Segment (Bottom Arc)
-    paint.color = const Color(0xFF34A853);
-    canvas.drawArc(innerRect, 0.4, 1.4, false, paint);
-
-    // Draw Blue Segment (Right Arc)
-    paint.color = const Color(0xFF4285F4);
-    canvas.drawArc(innerRect, -1.4, 1.8, false, paint);
-
-    // Draw Blue Horizontal Bar
-    final Paint barPaint = Paint()
+    // Paint for Blue Segment (#4285F4)
+    final Paint bluePaint = Paint()
       ..color = const Color(0xFF4285F4)
       ..style = PaintingStyle.fill
       ..isAntiAlias = true;
+
+    final Path bluePath = Path()
+      ..moveTo(s * 22.56, s * 12.25)
+      ..cubicTo(s * 22.56, s * 11.47, s * 22.49, s * 10.72, s * 22.36, s * 10.0)
+      ..lineTo(s * 12.0, s * 10.0)
+      ..lineTo(s * 12.0, s * 14.26)
+      ..lineTo(s * 17.92, s * 14.26)
+      ..cubicTo(s * 17.66, s * 15.63, s * 16.88, s * 16.79, s * 15.71, s * 17.57)
+      ..lineTo(s * 15.71, s * 20.34)
+      ..lineTo(s * 19.28, s * 20.34)
+      ..cubicTo(s * 21.36, s * 18.42, s * 22.56, s * 15.6, s * 22.56, s * 12.25)
+      ..close();
       
-    canvas.drawRect(
-      Rect.fromLTRB(cx, cy - strokeWidth / 2, cx + r, cy + strokeWidth / 2),
-      barPaint,
-    );
+    canvas.drawPath(bluePath, bluePaint);
+
+    // Paint for Green Segment (#34A853)
+    final Paint greenPaint = Paint()
+      ..color = const Color(0xFF34A853)
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    final Path greenPath = Path()
+      ..moveTo(s * 12.0, s * 23.0)
+      ..cubicTo(s * 14.97, s * 23.0, s * 17.46, s * 22.02, s * 19.28, s * 20.34)
+      ..lineTo(s * 15.71, s * 17.57)
+      ..cubicTo(s * 14.73, s * 18.23, s * 13.48, s * 18.63, s * 12.0, s * 18.63)
+      ..cubicTo(s * 9.14, s * 18.63, s * 6.71, s * 16.7, s * 5.84, s * 14.1)
+      ..lineTo(s * 2.18, s * 14.1)
+      ..lineTo(s * 2.18, s * 16.94)
+      ..cubicTo(s * 3.99, s * 20.53, s * 7.7, s * 23.0, s * 12.0, s * 23.0)
+      ..close();
+
+    canvas.drawPath(greenPath, greenPaint);
+
+    // Paint for Yellow Segment (#FBBC05)
+    final Paint yellowPaint = Paint()
+      ..color = const Color(0xFFFBBC05)
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    final Path yellowPath = Path()
+      ..moveTo(s * 5.84, s * 14.09)
+      ..cubicTo(s * 5.62, s * 13.43, s * 5.49, s * 12.73, s * 5.49, s * 12.0)
+      ..cubicTo(s * 5.49, s * 11.27, s * 5.62, s * 10.57, s * 5.84, s * 9.91)
+      ..lineTo(s * 5.84, s * 7.06)
+      ..lineTo(s * 2.18, s * 7.06)
+      ..cubicTo(s * 1.43, s * 8.55, s * 1.0, s * 10.22, s * 1.0, s * 12.0)
+      ..cubicTo(s * 1.0, s * 13.78, s * 1.43, s * 15.45, s * 2.18, s * 16.94)
+      ..lineTo(s * 5.03, s * 14.72)
+      ..cubicTo(s * 4.81, s * 14.06, s * 4.68, s * 13.36, s * 4.68, s * 12.63)
+      ..close();
+
+    canvas.drawPath(yellowPath, yellowPaint);
+
+    // Paint for Red Segment (#EA4335)
+    final Paint redPaint = Paint()
+      ..color = const Color(0xFFEA4335)
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    final Path redPath = Path()
+      ..moveTo(s * 12.0, s * 5.38)
+      ..cubicTo(s * 13.62, s * 5.38, s * 15.06, s * 5.94, s * 16.21, s * 7.02)
+      ..lineTo(s * 19.36, s * 3.87)
+      ..cubicTo(s * 17.45, s * 2.09, s * 14.97, s * 1.0, s * 12.0, s * 1.0)
+      ..cubicTo(s * 7.7, s * 1.0, s * 3.99, s * 3.47, s * 2.18, s * 7.06)
+      ..lineTo(s * 5.84, s * 9.9)
+      ..cubicTo(s * 6.71, s * 7.3, s * 9.14, s * 5.38, s * 12.0, s * 5.38)
+      ..close();
+
+    canvas.drawPath(redPath, redPaint);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// A high-performance premium scale micro-animation on interaction
+class PremiumInteractiveScale extends StatefulWidget {
+  final Widget child;
+
+  const PremiumInteractiveScale({super.key, required this.child});
+
+  @override
+  State<PremiumInteractiveScale> createState() => _PremiumInteractiveScaleState();
+}
+
+class _PremiumInteractiveScaleState extends State<PremiumInteractiveScale> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      onPointerDown: (_) => setState(() => _isPressed = true),
+      onPointerUp: (_) => setState(() => _isPressed = false),
+      onPointerCancel: (_) => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.98 : 1.0,
+        duration: const Duration(milliseconds: 80),
+        curve: Curves.easeOut,
+        child: widget.child,
+      ),
+    );
+  }
 }

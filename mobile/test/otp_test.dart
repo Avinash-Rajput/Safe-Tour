@@ -85,7 +85,7 @@ void main() {
 
     // 2. Transformed state: OTP inputs should be rendered
     expect(fakeAuth.signInWithPhoneCalled, isTrue);
-    expect(find.text('Enter '), findsOneWidget);
+    expect(find.text('Verification Code'), findsOneWidget);
 
     // Verify there are 6 TextField boxes
     final otpFields = find.byType(TextField);

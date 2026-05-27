@@ -1,12 +1,12 @@
 // ignore_for_file: deprecated_member_use
+import 'dart:async';
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../../../../core/theme/app_theme.dart';
-import 'dart:async';
-import 'dart:developer' as developer;
 
 class Country {
   final String name;
@@ -24,6 +24,7 @@ class Country {
   });
 }
 
+// Rich list of international countries with explicit ITU-T E.164 length limits
 const List<Country> countriesList = [
   Country(name: 'India', isoCode: 'IN', dialingCode: '+91', validationRegExp: r'^[6-9]\d{9}$', maxLength: 10),
   Country(name: 'United States', isoCode: 'US', dialingCode: '+1', validationRegExp: r'^\d{10}$', maxLength: 10),
@@ -118,7 +119,6 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
       );
       node.addListener(() {
         _log('Focus changed for index $index: hasFocus = ${node.hasFocus}');
-        setState(() {}); // Rebuild to update focus indicators visually
       });
       return node;
     });
@@ -141,16 +141,14 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
     }
     final node = _otpFocusNodes[index];
     if (node.context != null) {
+      _log('FocusNode at $index is attached to the tree. Requesting focus.');
       node.requestFocus();
-      _log('Focus successfully requested for index $index synchronously.');
     } else {
-      _log('Focus node context is null for index $index. Scheduling post-frame callback.');
+      _log('FocusNode at $index is NOT attached to the tree yet. Scheduling microtask/frame callback.');
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && node.context != null) {
+          _log('FocusNode at $index now attached. Requesting focus post-frame.');
           node.requestFocus();
-          _log('Focus successfully requested for index $index asynchronously.');
-        } else {
-          _log('Failed to focus node at index $index: widget unmounted or context still null.');
         }
       });
     }
@@ -360,10 +358,10 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+        content: Text(message, style: const TextStyle(color: Colors.white)),
         backgroundColor: AppTheme.danger,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -384,31 +382,24 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
             }).toList();
 
             return DraggableScrollableSheet(
-              initialChildSize: 0.75,
+              initialChildSize: 0.7,
               minChildSize: 0.5,
               maxChildSize: 0.95,
               builder: (context, scrollController) {
                 return Container(
                   decoration: const BoxDecoration(
-                    color: Color(0xFF1E1E1E),
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black54,
-                        blurRadius: 20,
-                        spreadRadius: 2,
-                      ),
-                    ],
+                    color: AppTheme.surface,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                   ),
                   child: Column(
                     children: [
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       Container(
-                        width: 44,
-                        height: 5,
+                        width: 40,
+                        height: 4,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(2.5),
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -418,18 +409,17 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
-                          letterSpacing: 0.3,
                         ),
                       ),
                       const SizedBox(height: 16),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: const Color(0xFF121212),
-                            borderRadius: BorderRadius.circular(16),
+                            color: AppTheme.background,
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: Colors.white.withOpacity(0.08),
+                              color: Colors.white.withOpacity(0.1),
                             ),
                           ),
                           child: TextField(
@@ -439,54 +429,31 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
                                 _searchQuery = val;
                               });
                             },
-                            decoration: InputDecoration(
-                              prefixIcon: Icon(Icons.search_rounded, color: Colors.white.withOpacity(0.4)),
-                              hintText: 'Search country name or dialing code...',
-                              hintStyle: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 15),
+                            decoration: const InputDecoration(
+                              prefixIcon: Icon(Icons.search, color: Colors.grey),
+                              hintText: 'Search country name or code...',
+                              hintStyle: TextStyle(color: Colors.grey),
                               border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 14),
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                       Expanded(
-                        child: ListView.separated(
+                        child: ListView.builder(
                           controller: scrollController,
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
                           itemCount: filtered.length,
-                          separatorBuilder: (context, index) => Divider(
-                            color: Colors.white.withOpacity(0.03),
-                            height: 1,
-                            indent: 16,
-                            endIndent: 16,
-                          ),
                           itemBuilder: (context, index) {
                             final country = filtered[index];
                             final isSelected = country.isoCode == _selectedCountry.isoCode;
                             return ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                              leading: Container(
-                                width: 42,
-                                height: 42,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white.withOpacity(0.03),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    _getCountryFlag(country.isoCode),
-                                    style: const TextStyle(fontSize: 22),
-                                  ),
-                                ),
+                              leading: Text(
+                                _getCountryFlag(country.isoCode),
+                                style: const TextStyle(fontSize: 24),
                               ),
                               title: Text(
                                 country.name,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 15,
-                                ),
+                                style: const TextStyle(color: Colors.white),
                               ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -494,14 +461,13 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
                                   Text(
                                     country.dialingCode,
                                     style: TextStyle(
-                                      color: Colors.white.withOpacity(0.5),
+                                      color: Colors.white.withOpacity(0.6),
                                       fontSize: 15,
-                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                   if (isSelected) ...[
-                                    const SizedBox(width: 14),
-                                    const Icon(Icons.check_circle_rounded, color: AppTheme.primary, size: 20),
+                                    const SizedBox(width: 12),
+                                    const Icon(Icons.check, color: AppTheme.primary),
                                   ],
                                 ],
                               ),
@@ -551,74 +517,29 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        centerTitle: true,
-        title: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Safe ',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w300,
-                color: Colors.white,
-                letterSpacing: 0.8,
-              ),
-            ),
-            Text(
-              'Tour',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primary,
-                letterSpacing: 0.8,
-              ),
-            ),
-          ],
-        ),
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.white.withOpacity(0.1),
-                width: 1.2,
-              ),
-            ),
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              icon: const Icon(Icons.arrow_back_rounded, size: 18, color: Colors.white),
-              onPressed: () {
-                if (_isOtpSent) {
-                  setState(() {
-                    _isOtpSent = false;
-                    _verificationId = null;
-                    for (var controller in _otpControllers) {
-                      controller.clear();
-                    }
-                  });
-                } else {
-                  context.pop();
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            if (_isOtpSent) {
+              setState(() {
+                _isOtpSent = false;
+                _verificationId = null;
+                for (var controller in _otpControllers) {
+                  controller.clear();
                 }
-              },
-            ),
-          ),
+              });
+            } else {
+              context.pop();
+            }
+          },
         ),
       ),
-      body: Stack(
-        children: [
-          // Glowing radial canvas
-          const Positioned.fill(
-            child: GlowingBackground(),
-          ),
-          
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: _isOtpSent ? _buildOtpState() : _buildPhoneState(),
-            ),
-          ),
-        ],
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          // Migrated from AnimatedSwitcher to a robust conditional layout to eliminate focus transition mutation lockups.
+          child: _isOtpSent ? _buildOtpState() : _buildPhoneState(),
+        ),
       ),
     );
   }
@@ -628,70 +549,38 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
       key: const ValueKey("phoneState"),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 24),
-        
-        // Premium Title
-        Row(
-          children: [
-            const Text(
-              'Verify ',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w300,
-                color: Colors.white,
-                letterSpacing: 0.5,
-              ),
-            ),
-            Text(
-              'Number',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primary,
-                letterSpacing: 0.5,
-                shadows: [
-                  Shadow(
-                    color: AppTheme.primary.withOpacity(0.3),
-                    blurRadius: 10,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        
-        // Premium Subtitle
-        Text(
-          "We'll send you a 6-digit one-time code to authenticate your secure travel profile.",
+        const SizedBox(height: 20),
+        const Text(
+          'Verify your number',
           style: TextStyle(
-            fontSize: 14,
-            color: Colors.white.withOpacity(0.55),
-            height: 1.4,
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'We will send you a one-time verification code.',
+          style: TextStyle(
+            fontSize: 15,
+            color: Colors.white.withOpacity(0.6),
           ),
         ),
         const SizedBox(height: 40),
         
-        // Searchable Country Dial Code Dropdown + Phone Input Field Card
+        // Searchable Country Dial Code Dropdown + Phone Input Field
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           decoration: BoxDecoration(
-            color: const Color(0xFF1E1E1E),
-            borderRadius: BorderRadius.circular(16),
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: _isPhoneValid 
                   ? AppTheme.primary 
-                  : (_validationError != null ? AppTheme.danger : Colors.white.withOpacity(_phoneController.text.isEmpty ? 0.06 : 0.2)),
+                  : (_validationError != null ? AppTheme.danger : Colors.white.withOpacity(_phoneController.text.isEmpty ? 0.1 : 0.3)),
               width: 1.5,
             ),
-            boxShadow: [
-              if (_isPhoneValid)
-                BoxShadow(
-                  color: AppTheme.primary.withOpacity(0.08),
-                  blurRadius: 12,
-                  spreadRadius: 1,
-                ),
-            ],
           ),
           child: Row(
             children: [
@@ -715,9 +604,8 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
                     ),
                     const SizedBox(width: 4),
                     Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      color: Colors.white.withOpacity(0.5),
-                      size: 18,
+                      Icons.arrow_drop_down,
+                      color: Colors.white.withOpacity(0.7),
                     ),
                   ],
                 ),
@@ -725,10 +613,10 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
               const SizedBox(width: 8),
               Container(
                 height: 24,
-                width: 1.2,
-                color: Colors.white.withOpacity(0.08),
+                width: 1,
+                color: Colors.white.withOpacity(0.2),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: TextField(
                   controller: _phoneController,
@@ -737,15 +625,14 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
                     fontSize: 18,
                     color: Colors.white,
                     letterSpacing: 1.5,
-                    fontWeight: FontWeight.w600,
                   ),
                   inputFormatters: [
                     FilteringTextInputFormatter.digitsOnly,
                     LengthLimitingTextInputFormatter(_selectedCountry.maxLength),
                   ],
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     hintText: 'Enter phone number',
-                    hintStyle: TextStyle(color: Colors.white.withOpacity(0.25), fontSize: 16, letterSpacing: 0.0),
+                    hintStyle: TextStyle(color: Colors.grey, fontSize: 16),
                     border: InputBorder.none,
                     counterText: '',
                   ),
@@ -757,74 +644,49 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
         
         // Active visual validation feedback
         if (_validationError != null) ...[
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Padding(
-            padding: const EdgeInsets.only(left: 6.0),
-            child: Row(
-              children: [
-                const Icon(Icons.error_outline_rounded, color: AppTheme.danger, size: 14),
-                const SizedBox(width: 6),
-                Text(
-                  _validationError!,
-                  style: const TextStyle(
-                    color: AppTheme.danger,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+            padding: const EdgeInsets.only(left: 4.0),
+            child: Text(
+              _validationError!,
+              style: const TextStyle(
+                color: AppTheme.danger,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
         
         const Spacer(),
         
-        // Tactile send button
-        TactileButton(
-          onTap: (_isPhoneValid && !_isLoading) ? _sendOtp : null,
-          child: Container(
-            width: double.infinity,
-            height: 56,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: (_isPhoneValid && !_isLoading)
-                  ? const LinearGradient(
-                      colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : null,
-              color: (!_isPhoneValid || _isLoading)
-                  ? AppTheme.primary.withOpacity(0.15)
-                  : null,
-              boxShadow: [
-                if (_isPhoneValid && !_isLoading)
-                  BoxShadow(
-                    color: AppTheme.primary.withOpacity(0.2),
-                    blurRadius: 15,
-                    offset: const Offset(0, 4),
-                  ),
-              ],
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: (_isPhoneValid && !_isLoading) ? _sendOtp : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primary,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: AppTheme.primary.withOpacity(0.3),
+              disabledForegroundColor: Colors.white.withOpacity(0.5),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: Center(
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : Text(
-                      'Send OTP',
-                      style: TextStyle(
-                        fontSize: 16, 
-                        fontWeight: FontWeight.bold,
-                        color: (_isPhoneValid && !_isLoading) ? Colors.white : Colors.white.withOpacity(0.35),
-                      ),
+            child: _isLoading
+                ? const SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
-            ),
+                  )
+                : const Text(
+                    'Send OTP',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
           ),
         ),
         const SizedBox(height: 24),
@@ -837,53 +699,30 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
       key: const ValueKey("otpState"),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 24),
-        
-        // Title
-        Row(
-          children: [
-            const Text(
-              'Enter ',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w300,
-                color: Colors.white,
-                letterSpacing: 0.5,
-              ),
-            ),
-            Text(
-              'Code',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primary,
-                letterSpacing: 0.5,
-                shadows: [
-                  Shadow(
-                    color: AppTheme.primary.withOpacity(0.3),
-                    blurRadius: 10,
-                  ),
-                ],
-              ),
-            ),
-          ],
+        const SizedBox(height: 20),
+        const Text(
+          'Verification Code',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            letterSpacing: 0.5,
+          ),
         ),
-        const SizedBox(height: 10),
-        
-        // Code description
+        const SizedBox(height: 12),
         Row(
           children: [
             Text(
               'Code sent to ',
               style: TextStyle(
-                fontSize: 14,
-                color: Colors.white.withOpacity(0.55),
+                fontSize: 15,
+                color: Colors.white.withOpacity(0.6),
               ),
             ),
             Text(
               _phoneNumber,
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.primary,
               ),
@@ -892,252 +731,124 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
         ),
         const SizedBox(height: 40),
         
-        // Premium 6-digit boxes
+        // 6 digit boxes with KeyboardListener backspace support
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: List.generate(6, (index) {
-            final isFocused = _otpFocusNodes[index].hasFocus;
-            final isNotEmpty = _otpControllers[index].text.isNotEmpty;
             return SizedBox(
               width: 48,
               height: 56,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                decoration: BoxDecoration(
-                  color: isFocused ? const Color(0xFF252525) : const Color(0xFF1E1E1E),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: isFocused 
-                        ? AppTheme.primary 
-                        : (isNotEmpty ? Colors.white.withOpacity(0.3) : Colors.white.withOpacity(0.08)),
-                    width: isFocused ? 2.0 : 1.2,
-                  ),
-                  boxShadow: [
-                    if (isFocused)
-                      BoxShadow(
-                        color: AppTheme.primary.withOpacity(0.12),
-                        blurRadius: 8,
-                        spreadRadius: 1,
-                      ),
-                  ],
+              child: TextField(
+                controller: _otpControllers[index],
+                focusNode: _otpFocusNodes[index],
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
-                child: TextField(
-                  controller: _otpControllers[index],
-                  focusNode: _otpFocusNodes[index],
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(1),
-                  ],
-                  onChanged: (value) {
-                    _log('Digit entered at index $index: "$value"');
-                    if (value.isNotEmpty) {
-                      if (index < 5) {
-                        _log('Auto-advancing focus from $index to ${index + 1}');
-                        _safeRequestFocus(index + 1);
-                      } else {
-                        _log('6th digit entered. Unfocusing and verifying OTP.');
-                        if (mounted) {
-                          _otpFocusNodes[index].unfocus();
-                        }
-                        _verifyOtp();
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(1),
+                ],
+                onChanged: (value) {
+                  _log('Digit entered at index $index: "$value"');
+                  if (value.isNotEmpty) {
+                    if (index < 5) {
+                      _log('Auto-advancing focus from $index to ${index + 1}');
+                      _safeRequestFocus(index + 1);
+                    } else {
+                      _log('6th digit entered. Unfocusing and verifying OTP.');
+                      if (mounted) {
+                        _otpFocusNodes[index].unfocus();
                       }
+                      _verifyOtp();
                     }
-                  },
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                    counterText: '',
+                  }
+                },
+                  decoration: InputDecoration(
+                    fillColor: AppTheme.surface,
+                    filled: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                        color: Colors.white.withOpacity(0.1),
+                        width: 1.5,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(
+                        color: AppTheme.primary,
+                        width: 2.0,
+                      ),
+                    ),
                   ),
                 ),
-              ),
             );
           }),
         ),
-        const SizedBox(height: 36),
+        const SizedBox(height: 32),
         
-        // Resend section
         Center(
           child: _timerSeconds > 0
-              ? Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.schedule_rounded, 
-                      color: Colors.white.withOpacity(0.4), 
-                      size: 16
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Resend in $_timerSeconds seconds',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white.withOpacity(0.4),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+              ? Text(
+                  'Resend OTP in $_timerSeconds seconds',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.white.withOpacity(0.5),
+                  ),
                 )
-              : TextButton.icon(
+              : TextButton(
                   onPressed: _isLoading ? null : _sendOtp,
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: const Text(
+                  child: const Text(
                     'Resend OTP',
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
+                      color: AppTheme.primary,
                     ),
-                  ),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppTheme.primary,
                   ),
                 ),
         ),
         
         const Spacer(),
         
-        // Tactile verify button
-        TactileButton(
-          onTap: (!_isLoading && _otpControllers.every((c) => c.text.isNotEmpty)) 
-              ? _verifyOtp 
-              : null,
-          child: Container(
-            width: double.infinity,
-            height: 56,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: (!_isLoading && _otpControllers.every((c) => c.text.isNotEmpty))
-                  ? const LinearGradient(
-                      colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : null,
-              color: (_isLoading || !_otpControllers.every((c) => c.text.isNotEmpty))
-                  ? AppTheme.primary.withOpacity(0.15)
-                  : null,
-              boxShadow: [
-                if (!_isLoading && _otpControllers.every((c) => c.text.isNotEmpty))
-                  BoxShadow(
-                    color: AppTheme.primary.withOpacity(0.2),
-                    blurRadius: 15,
-                    offset: const Offset(0, 4),
-                  ),
-              ],
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: (!_isLoading && _otpControllers.every((c) => c.text.isNotEmpty)) 
+                ? _verifyOtp 
+                : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primary,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: AppTheme.primary.withOpacity(0.3),
+              disabledForegroundColor: Colors.white.withOpacity(0.5),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: Center(
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : Text(
-                      'Verify & Proceed',
-                      style: TextStyle(
-                        fontSize: 16, 
-                        fontWeight: FontWeight.bold,
-                        color: (!_isLoading && _otpControllers.every((c) => c.text.isNotEmpty)) 
-                            ? Colors.white 
-                            : Colors.white.withOpacity(0.35),
-                      ),
+            child: _isLoading
+                ? const SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
-            ),
+                  )
+                : const Text(
+                    'Verify',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
           ),
         ),
         const SizedBox(height: 24),
       ],
-    );
-  }
-}
-
-class GlowingBackground extends StatelessWidget {
-  const GlowingBackground({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: Container(color: AppTheme.background),
-        ),
-        // Subtle top glowing element
-        Positioned(
-          top: -200,
-          left: MediaQuery.of(context).size.width / 4,
-          width: MediaQuery.of(context).size.width / 2,
-          height: 350,
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.primary.withOpacity(0.06),
-                  blurRadius: 80,
-                  spreadRadius: 40,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class TactileButton extends StatefulWidget {
-  final VoidCallback? onTap;
-  final Widget child;
-
-  const TactileButton({super.key, this.onTap, required this.child});
-
-  @override
-  State<TactileButton> createState() => _TactileButtonState();
-}
-
-class _TactileButtonState extends State<TactileButton> {
-  double _scale = 1.0;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) {
-        if (widget.onTap != null) {
-          setState(() {
-            _scale = 0.96;
-          });
-        }
-      },
-      onTapUp: (_) {
-        if (widget.onTap != null) {
-          setState(() {
-            _scale = 1.0;
-          });
-        }
-      },
-      onTapCancel: () {
-        if (widget.onTap != null) {
-          setState(() {
-            _scale = 1.0;
-          });
-        }
-      },
-      onTap: widget.onTap,
-      child: AnimatedScale(
-        scale: _scale,
-        duration: const Duration(milliseconds: 100),
-        curve: Curves.easeOutCubic,
-        child: widget.child,
-      ),
     );
   }
 }
