@@ -70,6 +70,10 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
   String _searchQuery = "";
   String? _validationError;
   
+  // Timestamps for performance measurement
+  DateTime? _buttonPressTime;
+  DateTime? _codeSentTime;
+  
   // Default country = India (+91)
   Country _selectedCountry = countriesList[0];
   
@@ -121,7 +125,8 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
   }
 
   void _log(String message) {
-    developer.log('SafeTourPhoneAuth: $message');
+    final timestamp = DateTime.now().toIso8601String();
+    developer.log('SafeTourPhoneAuth [$timestamp]: $message');
   }
 
   void _safeRequestFocus(int index) {
@@ -232,18 +237,21 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
       return;
     }
     
+    _buttonPressTime = DateTime.now();
+    _log('Send OTP button pressed');
+
     setState(() {
       _isLoading = true;
       _phoneNumber = '${_selectedCountry.dialingCode}${_phoneController.text}';
     });
 
-    _log('Initiating verifyPhoneNumber for number: $_phoneNumber');
+    _log('verifyPhoneNumber started for phone: $_phoneNumber');
 
     try {
-      await ref.read(authServiceProvider).signInWithPhone(
+      ref.read(authServiceProvider).signInWithPhone(
         phoneNumber: _phoneNumber,
         verificationCompleted: (credential) async {
-          _log('verificationCompleted callback triggered. Auto-signed in.');
+          _log('verificationCompleted callback triggered');
           try {
             await ref.read(authServiceProvider).verifyOTP(
               verificationId: _verificationId ?? "",
@@ -261,16 +269,33 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
           }
         },
         codeSent: (verificationId, resendToken) {
-          _log('codeSent callback triggered. Verification ID: $verificationId. Transitioning immediately.');
+          _codeSentTime = DateTime.now();
+          final delayFromPress = _buttonPressTime != null 
+              ? _codeSentTime!.difference(_buttonPressTime!).inMilliseconds 
+              : null;
+          _log('codeSent callback fired. Delay from button press: ${delayFromPress}ms. Verification ID: $verificationId');
+          
           if (mounted) {
             setState(() {
               _verificationId = verificationId;
               _isOtpSent = true;
               _isLoading = false; // Reset loading spinner instantly!
             });
+            _log('OTP screen state changed (_isOtpSent = true)');
+            
             _startTimer();
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              _safeRequestFocus(0);
+              if (mounted) {
+                final renderTime = DateTime.now();
+                final delayFromSent = _codeSentTime != null
+                    ? renderTime.difference(_codeSentTime!).inMilliseconds
+                    : null;
+                final totalDelay = _buttonPressTime != null
+                    ? renderTime.difference(_buttonPressTime!).inMilliseconds
+                    : null;
+                _log('OTP UI rendered. Delay from codeSent: ${delayFromSent}ms. Total delay from button press: ${totalDelay}ms.');
+                _safeRequestFocus(0);
+              }
             });
           }
         },
@@ -278,7 +303,15 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
           _log('codeAutoRetrievalTimeout callback triggered. Verification ID: $verificationId');
           _verificationId = verificationId;
         },
-      );
+      ).catchError((e) {
+        _log('verifyPhoneNumber asynchronous catch: $e');
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+          _showError(e.toString().replaceFirst('Exception: ', ''));
+        }
+      });
     } catch (e) {
       _log('verifyPhoneNumber synchronous catch: $e');
       if (mounted) {
