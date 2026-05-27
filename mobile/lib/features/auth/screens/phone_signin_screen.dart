@@ -61,7 +61,7 @@ class PhoneSignInScreen extends ConsumerStatefulWidget {
 class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final List<TextEditingController> _otpControllers = List.generate(6, (_) => TextEditingController());
-  final List<FocusNode> _otpFocusNodes = List.generate(6, (_) => FocusNode());
+  late final List<FocusNode> _otpFocusNodes;
   
   bool _isOtpSent = false;
   bool _isLoading = false;
@@ -82,10 +82,71 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
   void initState() {
     super.initState();
     _phoneController.addListener(_onPhoneChanged);
+    _otpFocusNodes = List.generate(6, (index) {
+      final node = FocusNode(
+        debugLabel: 'otp_focus_$index',
+        onKeyEvent: (node, event) {
+          final isBackspace = event.logicalKey == LogicalKeyboardKey.backspace;
+          final isDown = event is KeyDownEvent;
+          
+          if (isBackspace && isDown) {
+            _log('Backspace action detected at index $index');
+            final currentText = _otpControllers[index].text;
+            if (currentText.isNotEmpty) {
+              _log('Current field $index is not empty (val: $currentText). Clearing current digit.');
+              setState(() {
+                _otpControllers[index].clear();
+              });
+            } else {
+              _log('Current field $index is empty. Moving focus to previous field.');
+              if (index > 0) {
+                final prevIndex = index - 1;
+                _log('Clearing and focusing previous field at index $prevIndex.');
+                setState(() {
+                  _otpControllers[prevIndex].clear();
+                });
+                _safeRequestFocus(prevIndex);
+              }
+            }
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+      );
+      node.addListener(() {
+        _log('Focus changed for index $index: hasFocus = ${node.hasFocus}');
+      });
+      return node;
+    });
   }
 
   void _log(String message) {
     developer.log('SafeTourPhoneAuth: $message');
+  }
+
+  void _safeRequestFocus(int index) {
+    _log('Attempting safe focus request for index $index');
+    if (!mounted) {
+      _log('Focus request aborted: widget is not mounted.');
+      return;
+    }
+    if (index < 0 || index >= _otpFocusNodes.length) {
+      _log('Focus request aborted: index $index out of bounds.');
+      return;
+    }
+    final node = _otpFocusNodes[index];
+    if (node.context != null) {
+      _log('FocusNode at $index is attached to the tree. Requesting focus.');
+      node.requestFocus();
+    } else {
+      _log('FocusNode at $index is NOT attached to the tree yet. Scheduling microtask/frame callback.');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && node.context != null) {
+          _log('FocusNode at $index now attached. Requesting focus post-frame.');
+          node.requestFocus();
+        }
+      });
+    }
   }
 
   void _onPhoneChanged() {
@@ -162,7 +223,6 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
       return;
     }
 
-    // Double-check validations before dispatch
     final numberToCheck = _phoneController.text;
     if (!_validatePhoneNumber(numberToCheck, _selectedCountry)) {
       setState(() {
@@ -193,22 +253,26 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
         },
         verificationFailed: (exception) {
           _log('verificationFailed callback triggered. Code: ${exception.code}, message: ${exception.message}');
-          setState(() {
-            _isLoading = false;
-          });
-          _showError(exception.message ?? 'Verification failed. Please try again.');
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+            _showError(exception.message ?? 'Verification failed. Please try again.');
+          }
         },
         codeSent: (verificationId, resendToken) {
           _log('codeSent callback triggered. Verification ID: $verificationId. Transitioning immediately.');
-          setState(() {
-            _verificationId = verificationId;
-            _isOtpSent = true;
-            _isLoading = false; // Reset loading spinner instantly!
-          });
-          _startTimer();
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _otpFocusNodes[0].requestFocus();
-          });
+          if (mounted) {
+            setState(() {
+              _verificationId = verificationId;
+              _isOtpSent = true;
+              _isLoading = false; // Reset loading spinner instantly!
+            });
+            _startTimer();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _safeRequestFocus(0);
+            });
+          }
         },
         codeAutoRetrievalTimeout: (verificationId) {
           _log('codeAutoRetrievalTimeout callback triggered. Verification ID: $verificationId');
@@ -217,10 +281,12 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
       );
     } catch (e) {
       _log('verifyPhoneNumber synchronous catch: $e');
-      setState(() {
-        _isLoading = false;
-      });
-      _showError(e.toString().replaceFirst('Exception: ', ''));
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        _showError(e.toString().replaceFirst('Exception: ', ''));
+      }
     }
   }
 
@@ -242,14 +308,16 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
         context.go('/home');
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      _showError(e.toString().replaceFirst('Exception: ', ''));
-      for (var controller in _otpControllers) {
-        controller.clear();
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        _showError(e.toString().replaceFirst('Exception: ', ''));
+        for (var controller in _otpControllers) {
+          controller.clear();
+        }
+        _safeRequestFocus(0);
       }
-      _otpFocusNodes[0].requestFocus();
     }
   }
 
@@ -374,7 +442,6 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
                                 setState(() {
                                   _selectedCountry = country;
                                   _searchQuery = "";
-                                  // Safely truncate existing inputs to match the new country's maximum digits constraint
                                   if (_phoneController.text.length > country.maxLength) {
                                     _phoneController.text = _phoneController.text.substring(0, country.maxLength);
                                   }
@@ -437,10 +504,8 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: _isOtpSent ? _buildOtpState() : _buildPhoneState(),
-          ),
+          // Migrated from AnimatedSwitcher to a robust conditional layout to eliminate focus transition mutation lockups.
+          child: _isOtpSent ? _buildOtpState() : _buildPhoneState(),
         ),
       ),
     );
@@ -640,45 +705,35 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
             return SizedBox(
               width: 48,
               height: 56,
-              child: KeyboardListener(
+              child: TextField(
+                controller: _otpControllers[index],
                 focusNode: _otpFocusNodes[index],
-                onKeyEvent: (event) {
-                  final isBackspace = event.logicalKey == LogicalKeyboardKey.backspace;
-                  if (isBackspace && (event is KeyDownEvent || event.runtimeType.toString().contains('KeyDown'))) {
-                    if (_otpControllers[index].text.isNotEmpty) {
-                      _otpControllers[index].clear();
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(1),
+                ],
+                onChanged: (value) {
+                  _log('Digit entered at index $index: "$value"');
+                  if (value.isNotEmpty) {
+                    if (index < 5) {
+                      _log('Auto-advancing focus from $index to ${index + 1}');
+                      _safeRequestFocus(index + 1);
                     } else {
-                      if (index > 0) {
-                        _otpFocusNodes[index - 1].requestFocus();
-                        _otpControllers[index - 1].clear();
+                      _log('6th digit entered. Unfocusing and verifying OTP.');
+                      if (mounted) {
+                        _otpFocusNodes[index].unfocus();
                       }
+                      _verifyOtp();
                     }
                   }
                 },
-                child: TextField(
-                  controller: _otpControllers[index],
-                  focusNode: _otpFocusNodes[index],
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(1),
-                  ],
-                  onChanged: (value) {
-                    if (value.isNotEmpty) {
-                      if (index < 5) {
-                        _otpFocusNodes[index + 1].requestFocus();
-                      } else {
-                        _otpFocusNodes[index].unfocus();
-                        _verifyOtp();
-                      }
-                    }
-                  },
                   decoration: InputDecoration(
                     fillColor: AppTheme.surface,
                     filled: true,
@@ -699,7 +754,6 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
                     ),
                   ),
                 ),
-              ),
             );
           }),
         ),
