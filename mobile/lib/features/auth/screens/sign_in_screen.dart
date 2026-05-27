@@ -12,10 +12,34 @@ class SignInScreen extends ConsumerStatefulWidget {
   ConsumerState<SignInScreen> createState() => _SignInScreenState();
 }
 
-class _SignInScreenState extends ConsumerState<SignInScreen> {
+class _SignInScreenState extends ConsumerState<SignInScreen> with SingleTickerProviderStateMixin {
   bool _isLoading = false;
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOutCubic,
+    );
+    _fadeController.forward();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
+  }
 
   Future<void> _handleGoogleSignIn() async {
+    if (_isLoading) return;
+    
     setState(() {
       _isLoading = true;
     });
@@ -23,7 +47,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     try {
       final credential = await ref.read(authServiceProvider).signInWithGoogle();
       if (credential == null) {
-        // Sign-in cancelled by user, stop loading without showing error
         if (mounted) {
           setState(() {
             _isLoading = false;
@@ -31,8 +54,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         }
         return;
       }
-      // On success, the GoRouter refreshListenable redirect will automatically
-      // navigate to /home. We still check if mounted before updating state just in case.
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -44,18 +65,17 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           _isLoading = false;
         });
         
-        // Error message constraint: never expose technical details to user
         final errorMessage = e.toString().replaceFirst('Exception: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               errorMessage,
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
             ),
             backgroundColor: AppTheme.danger,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
         );
@@ -67,189 +87,387 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Spacer(),
-              
-              // Glowing shield icon inside a green circle
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppTheme.primary.withOpacity(0.08),
-                    border: Border.all(
-                      color: AppTheme.primary.withOpacity(0.2),
-                      width: 2,
+      body: Stack(
+        children: [
+          // Glowing Radial Background Canvas
+          const Positioned.fill(
+            child: GlowingBackground(),
+          ),
+          
+          SafeArea(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 28.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Spacer(flex: 3),
+                    
+                    // Stylish floating travel-safety hero icon
+                    const Center(
+                      child: OnboardingHeroIcon(),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primary.withOpacity(0.15),
-                        blurRadius: 30,
-                        spreadRadius: 8,
-                      ),
-                    ],
-                  ),
-                  child: Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [AppTheme.primary, Color(0xFF388E3C)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.shield,
-                      size: 68,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
-              
-              // SafeTour Title Text with premium typography and spacing
-              const Text(
-                'SafeTour',
-                style: TextStyle(
-                  fontSize: 38,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  letterSpacing: 2.0,
-                ),
-              ),
-              const SizedBox(height: 8),
-              
-              // Subtitle
-              Text(
-                'Your Premium Security & Travel Companion',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Colors.white.withOpacity(0.6),
-                  letterSpacing: 0.5,
-                ),
-              ),
-              
-              const Spacer(),
-              
-              // Loading Spinner or Button layer
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 250),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 54,
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
-                            strokeWidth: 3,
+                    const SizedBox(height: 36),
+                    
+                    // Premium "Safe Tour" typography
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'Safe ',
+                          style: TextStyle(
+                            fontSize: 36,
+                            fontWeight: FontWeight.w300,
+                            color: Colors.white,
+                            letterSpacing: 1.5,
                           ),
                         ),
-                      )
-                    : Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(27),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 15,
-                                  offset: const Offset(0, 4),
+                        Text(
+                          'Tour',
+                          style: TextStyle(
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primary,
+                            letterSpacing: 1.5,
+                            shadows: [
+                              Shadow(
+                                color: AppTheme.primary.withOpacity(0.4),
+                                blurRadius: 15,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    
+                    // High-end subtitle for international tourists
+                    Text(
+                      'Your Global Security & Travel Companion',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.55),
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                    
+                    const Spacer(flex: 4),
+                    
+                    // Elegant bottom onboarding card
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 128,
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                                      strokeWidth: 3.5,
+                                    ),
+                                    SizedBox(height: 16),
+                                    Text(
+                                      'Connecting securely...',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Google Sign-In with Tactile Animation
+                                TactileButton(
+                                  onTap: _handleGoogleSignIn,
+                                  child: Container(
+                                    width: double.infinity,
+                                    height: 56,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(16),
+                                      gradient: const LinearGradient(
+                                        colors: [Colors.white, Color(0xFFF5F5F5)],
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.15),
+                                          blurRadius: 15,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Center(
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          CustomPaint(
+                                            size: const Size(22, 22),
+                                            painter: GoogleGLogoPainter(),
+                                          ),
+                                          const SizedBox(width: 14),
+                                          const Text(
+                                            'Sign in with Google',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF212121),
+                                              letterSpacing: 0.2,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                
+                                // Phone Sign-In with Tactile Animation
+                                TactileButton(
+                                  onTap: () => context.push('/phone-signin'),
+                                  child: Container(
+                                    width: double.infinity,
+                                    height: 56,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                        color: Colors.white.withOpacity(0.12),
+                                        width: 1.5,
+                                      ),
+                                      color: Colors.white.withOpacity(0.04),
+                                    ),
+                                    child: const Center(
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.phone_iphone_rounded, size: 22, color: Colors.white),
+                                          SizedBox(width: 14),
+                                          Text(
+                                            'Sign in with Phone Number',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.white,
+                                              letterSpacing: 0.2,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
-                            child: ElevatedButton(
-                              onPressed: _handleGoogleSignIn,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: Colors.black,
-                                minimumSize: const Size(double.infinity, 54),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(27),
-                                ),
-                                elevation: 0,
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  CustomPaint(
-                                    size: const Size(22, 22),
-                                    painter: GoogleGLogoPainter(),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  const Text(
-                                    'Sign in with Google',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.black87,
-                                      letterSpacing: 0.2,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(27),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.2),
-                                width: 1.5,
-                              ),
-                            ),
-                            child: ElevatedButton(
-                              onPressed: () => context.push('/phone-signin'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                foregroundColor: Colors.white,
-                                minimumSize: const Size(double.infinity, 54),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(27),
-                                ),
-                                elevation: 0,
-                              ),
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.phone_android, size: 22, color: Colors.white),
-                                  SizedBox(width: 14),
-                                  Text(
-                                    'Sign in with Phone Number',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                      letterSpacing: 0.2,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                    ),
+                    const SizedBox(height: 36),
+                  ],
+                ),
               ),
-              
-              const SizedBox(height: 48),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-/// CustomPainter to render an extremely precise and crisp vector Google 'G' logo
+class GlowingBackground extends StatelessWidget {
+  const GlowingBackground({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Container(color: AppTheme.background),
+        ),
+        // Top-right radial glow
+        Positioned(
+          top: -150,
+          right: -150,
+          width: 500,
+          height: 500,
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primary.withOpacity(0.07),
+                  blurRadius: 100,
+                  spreadRadius: 50,
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Bottom-left radial glow
+        Positioned(
+          bottom: -200,
+          left: -200,
+          width: 600,
+          height: 600,
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF1B5E20).withOpacity(0.04),
+                  blurRadius: 120,
+                  spreadRadius: 60,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class OnboardingHeroIcon extends StatelessWidget {
+  const OnboardingHeroIcon({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        // Outer glowing ring
+        Container(
+          width: 140,
+          height: 140,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppTheme.primary.withOpacity(0.03),
+            border: Border.all(
+              color: AppTheme.primary.withOpacity(0.1),
+              width: 1.5,
+            ),
+          ),
+        ),
+        // Secondary decorative rotating boundary
+        Container(
+          width: 110,
+          height: 110,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white.withOpacity(0.06),
+              width: 1.2,
+            ),
+          ),
+          child: const Padding(
+            padding: EdgeInsets.all(4.0),
+            child: CircularProgressIndicator(
+              value: 0.65,
+              strokeWidth: 1.5,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white10),
+            ),
+          ),
+        ),
+        // Central icon container
+        Container(
+          width: 82,
+          height: 82,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const LinearGradient(
+              colors: [
+                Color(0xFF2E7D32),
+                Color(0xFF1B5E20),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.primary.withOpacity(0.25),
+                blurRadius: 20,
+                spreadRadius: 2,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.shield_outlined,
+            size: 38,
+            color: Colors.white,
+          ),
+        ),
+        // Airplane accent flying over the shield
+        Positioned(
+          top: 28,
+          right: 28,
+          child: Transform.rotate(
+            angle: 0.6,
+            child: Icon(
+              Icons.airplanemode_active_rounded,
+              size: 20,
+              color: Colors.white.withOpacity(0.85),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class TactileButton extends StatefulWidget {
+  final VoidCallback? onTap;
+  final Widget child;
+
+  const TactileButton({super.key, this.onTap, required this.child});
+
+  @override
+  State<TactileButton> createState() => _TactileButtonState();
+}
+
+class _TactileButtonState extends State<TactileButton> {
+  double _scale = 1.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) {
+        if (widget.onTap != null) {
+          setState(() {
+            _scale = 0.96;
+          });
+        }
+      },
+      onTapUp: (_) {
+        if (widget.onTap != null) {
+          setState(() {
+            _scale = 1.0;
+          });
+        }
+      },
+      onTapCancel: () {
+        if (widget.onTap != null) {
+          setState(() {
+            _scale = 1.0;
+          });
+        }
+      },
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOutCubic,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
 class GoogleGLogoPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -288,7 +506,6 @@ class GoogleGLogoPainter extends CustomPainter {
       ..style = PaintingStyle.fill
       ..isAntiAlias = true;
       
-    // The bar is centered vertically and extends to the right edge
     canvas.drawRect(
       Rect.fromLTRB(cx, cy - strokeWidth / 2, cx + r, cy + strokeWidth / 2),
       barPaint,
