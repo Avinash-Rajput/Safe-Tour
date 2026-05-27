@@ -37,6 +37,50 @@ class AuthService {
     }
   }
 
+  /// Starts the phone number verification process.
+  Future<void> signInWithPhone({
+    required String phoneNumber,
+    required PhoneVerificationCompleted verificationCompleted,
+    required PhoneVerificationFailed verificationFailed,
+    required PhoneCodeSent codeSent,
+    required PhoneCodeAutoRetrievalTimeout codeAutoRetrievalTimeout,
+  }) async {
+    try {
+      await _auth.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        verificationCompleted: verificationCompleted,
+        verificationFailed: verificationFailed,
+        codeSent: codeSent,
+        codeAutoRetrievalTimeout: codeAutoRetrievalTimeout,
+        timeout: const Duration(seconds: 60),
+      );
+    } catch (e) {
+      throw Exception('Failed to send verification code. Please try again.');
+    }
+  }
+
+  /// Verifies the OTP and signs the user in.
+  Future<UserCredential> verifyOTP({
+    required String verificationId,
+    required String smsCode,
+  }) async {
+    try {
+      final AuthCredential credential = PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: smsCode,
+      );
+      return await _auth.signInWithCredential(credential);
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'invalid-verification-code') {
+        throw Exception('Invalid OTP. Please try again.');
+      }
+      throw Exception('Failed to verify OTP. Please try again.');
+    } catch (e) {
+      throw Exception('Invalid OTP. Please try again.');
+    }
+  }
+
+
   String _mapFirebaseAuthError(String code) {
     switch (code) {
       case 'network-request-failed':

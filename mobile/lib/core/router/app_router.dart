@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/screens/sign_in_screen.dart';
+import '../../features/auth/screens/phone_signin_screen.dart';
 import '../../features/heatmap/screens/home_screen.dart';
 import '../../features/sos/screens/sos_screen.dart';
 import '../../features/live_share/screens/live_share_screen.dart';
@@ -34,7 +35,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Grab current auth value
       final authState = ref.read(authStateProvider);
       final user = authState.valueOrNull;
-      final isLoggingIn = state.matchedLocation == '/signin';
+      final isAuthRoute = state.matchedLocation == '/signin' || state.matchedLocation == '/phone-signin';
 
       // Avoid redirecting prematurely before auth initialization completes
       if (authState.isLoading) {
@@ -42,17 +43,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       if (user == null) {
-        // If not logged in and not on /signin → redirect to /signin
-        return isLoggingIn ? null : '/signin';
+        // If not logged in and not on an auth route → redirect to /signin
+        return isAuthRoute ? null : '/signin';
       } else {
-        // If logged in and on /signin → redirect to /home
-        return isLoggingIn ? '/home' : null;
+        // If logged in and on an auth route → redirect to /home
+        return isAuthRoute ? '/home' : null;
       }
     },
     routes: [
       GoRoute(
         path: '/signin',
         builder: (context, state) => const SignInScreen(),
+      ),
+      GoRoute(
+        path: '/phone-signin',
+        builder: (context, state) => const PhoneSignInScreen(),
       ),
       GoRoute(
         path: '/home',
