@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 import 'dart:async';
 import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -47,7 +48,7 @@ const List<Country> countriesList = [
   Country(name: 'Sweden', isoCode: 'SE', dialingCode: '+46', validationRegExp: r'^7[02369]\d{7}$', maxLength: 9),
   Country(name: 'Norway', isoCode: 'NO', dialingCode: '+47', validationRegExp: r'^[49]\d{7}$', maxLength: 8),
   Country(name: 'Denmark', isoCode: 'DK', dialingCode: '+45', validationRegExp: r'^[2-9]\d{7}$', maxLength: 8),
-  Country(name: 'Finland', isoCode: 'FI', dialingCode: '+358', validationRegExp: r'^(457|4[0-9]|50)\d{6,7}$', maxLength: 10),
+  Country(name: 'Finland', isoCode: 'FI', dialingCode: '+358', validationRegExp: r'^(4\d|50)\d{6,8}$', maxLength: 10),
   Country(name: 'Ireland', isoCode: 'IE', dialingCode: '+353', validationRegExp: r'^8[3-9]\d{7}$', maxLength: 9),
 ];
 
@@ -97,7 +98,7 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
             _log('Backspace action detected at index $index');
             final currentText = _otpControllers[index].text;
             if (currentText.isNotEmpty) {
-              _log('Current field $index is not empty (val: $currentText). Clearing current digit.');
+              _log('Current field $index is not empty. Clearing current digit.');
               setState(() {
                 _otpControllers[index].clear();
               });
@@ -125,8 +126,12 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
   }
 
   void _log(String message) {
+    if (!kDebugMode) return;
     final timestamp = DateTime.now().toIso8601String();
-    developer.log('SafeTourPhoneAuth [$timestamp]: $message');
+    developer.log(
+      'Safe Tour PhoneAuth [$timestamp]: $message',
+      name: 'Safe Tour PhoneAuth',
+    );
   }
 
   void _safeRequestFocus(int index) {
@@ -248,16 +253,25 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
     _log('verifyPhoneNumber started for phone: $_phoneNumber');
 
     try {
-      ref.read(authServiceProvider).signInWithPhone(
+      await ref.read(authServiceProvider).signInWithPhone(
         phoneNumber: _phoneNumber,
         verificationCompleted: (credential) async {
           _log('verificationCompleted callback triggered');
           try {
-            await ref.read(authServiceProvider).verifyOTP(
-              verificationId: _verificationId ?? "",
-              smsCode: credential.smsCode ?? "",
-            );
-          } catch (_) {}
+            await ref.read(authServiceProvider).signInWithPhoneCredential(credential);
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+              });
+            }
+          } catch (e) {
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+              });
+              _showError(e.toString().replaceFirst('Exception: ', ''));
+            }
+          }
         },
         verificationFailed: (exception) {
           _log('verificationFailed callback triggered. Code: ${exception.code}, message: ${exception.message}');
@@ -303,15 +317,7 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
           _log('codeAutoRetrievalTimeout callback triggered. Verification ID: $verificationId');
           _verificationId = verificationId;
         },
-      ).catchError((e) {
-        _log('verifyPhoneNumber asynchronous catch: $e');
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-          _showError(e.toString().replaceFirst('Exception: ', ''));
-        }
-      });
+      );
     } catch (e) {
       _log('verifyPhoneNumber synchronous catch: $e');
       if (mounted) {
@@ -338,7 +344,9 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
       );
       
       if (mounted) {
-        context.go('/home');
+        setState(() {
+          _isLoading = false;
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -367,6 +375,7 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
   }
 
   void _showCountryPicker() {
+    _searchQuery = "";
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -753,7 +762,7 @@ class _PhoneSignInScreenState extends ConsumerState<PhoneSignInScreen> {
                   LengthLimitingTextInputFormatter(1),
                 ],
                 onChanged: (value) {
-                  _log('Digit entered at index $index: "$value"');
+                  _log('Digit entered at index $index');
                   if (value.isNotEmpty) {
                     if (index < 5) {
                       _log('Auto-advancing focus from $index to ${index + 1}');

@@ -114,9 +114,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               ),
               const SizedBox(height: 32),
               
-              // SafeTour Title Text with premium typography and spacing
+              // Safe Tour title text with premium typography and spacing
               const Text(
-                'SafeTour',
+                'Safe Tour',
                 style: TextStyle(
                   fontSize: 38,
                   fontWeight: FontWeight.bold,

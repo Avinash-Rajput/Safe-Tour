@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -54,9 +55,22 @@ class AuthService {
         codeAutoRetrievalTimeout: codeAutoRetrievalTimeout,
         timeout: const Duration(seconds: 60),
       );
-    } catch (e) {
+    } on FirebaseAuthException catch (e) {
+      developer.log(
+        'Phone verification failed: code=${e.code}, message=${e.message}',
+        name: 'Safe Tour Auth',
+      );
+      throw Exception(_mapPhoneAuthError(e.code));
+    } catch (_) {
       throw Exception('Failed to send verification code. Please try again.');
     }
+  }
+
+  /// Signs in with a pre-built phone credential.
+  Future<UserCredential> signInWithPhoneCredential(
+    PhoneAuthCredential credential,
+  ) async {
+    return _auth.signInWithCredential(credential);
   }
 
   /// Verifies the OTP and signs the user in.
@@ -112,6 +126,19 @@ class AuthService {
         return 'Google sign-in was canceled.';
       default:
         return 'Unable to sign in with Google right now. Please try again.';
+    }
+  }
+
+  String _mapPhoneAuthError(String code) {
+    switch (code) {
+      case 'invalid-phone-number':
+        return 'Please enter a valid phone number.';
+      case 'too-many-requests':
+        return 'Too many attempts. Please wait before trying again.';
+      case 'network-request-failed':
+        return 'Network error. Please check your internet connection and try again.';
+      default:
+        return 'Failed to send verification code. Please try again.';
     }
   }
 

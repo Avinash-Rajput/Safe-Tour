@@ -1,5 +1,5 @@
 class AppConstants {
-  static const String appName = 'SafeTour';
+  static const String appName = 'Safe Tour';
   static const String backendBaseUrl = 'https://safetour-backend.onrender.com';
   static const int sosPingIntervalSeconds = 30;
   static const int liveSharePingIntervalSeconds = 30;

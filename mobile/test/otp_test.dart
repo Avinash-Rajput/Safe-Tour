@@ -52,6 +52,13 @@ class FakeAuthService implements AuthService {
   }
 
   @override
+  Future<UserCredential> signInWithPhoneCredential(
+    PhoneAuthCredential credential,
+  ) async {
+    return FakeUserCredential();
+  }
+
+  @override
   Future<void> signOut() async {}
 }
 
