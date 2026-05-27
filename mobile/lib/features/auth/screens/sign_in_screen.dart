@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 
@@ -113,9 +114,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               ),
               const SizedBox(height: 32),
               
-              // SafeTour Title Text with premium typography and spacing
+              // Safe Tour title text with premium typography and spacing
               const Text(
-                'SafeTour',
+                'Safe Tour',
                 style: TextStyle(
                   fontSize: 38,
                   fontWeight: FontWeight.bold,
@@ -151,49 +152,100 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           ),
                         ),
                       )
-                    : Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(27),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 15,
-                              offset: const Offset(0, 4),
+                      : Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            PremiumInteractiveScale(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.12),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: _handleGoogleSignIn,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: Colors.black,
+                                    minimumSize: const Size(double.infinity, 54),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      CustomPaint(
+                                        size: const Size(20, 20),
+                                        painter: GoogleGLogoPainter(),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Text(
+                                        'Sign in with Google',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black87,
+                                          letterSpacing: 0.1,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            PremiumInteractiveScale(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.15),
+                                    width: 1.2,
+                                  ),
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: () => context.push('/phone-signin'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    foregroundColor: Colors.white,
+                                    minimumSize: const Size(double.infinity, 54),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.phone_android, size: 20, color: Colors.white),
+                                      SizedBox(width: 12),
+                                      Text(
+                                        'Sign in with Phone Number',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                          letterSpacing: 0.1,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                        child: ElevatedButton(
-                          onPressed: _handleGoogleSignIn,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
-                            minimumSize: const Size(double.infinity, 54),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(27),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              CustomPaint(
-                                size: const Size(22, 22),
-                                painter: GoogleGLogoPainter(),
-                              ),
-                              const SizedBox(width: 14),
-                              const Text(
-                                'Sign in with Google',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
               ),
               
               const SizedBox(height: 48),
@@ -209,48 +261,115 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 class GoogleGLogoPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final double cx = size.width / 2;
-    final double cy = size.height / 2;
-    final double r = size.width / 2;
-    final double strokeWidth = size.width * 0.22;
-    final double innerRadius = r - strokeWidth / 2;
-    final Rect innerRect = Rect.fromCircle(center: Offset(cx, cy), radius: innerRadius);
+    final double s = size.width / 24;
     
-    final Paint paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.butt
-      ..isAntiAlias = true;
-
-    // Draw Red Segment (Top Arc)
-    paint.color = const Color(0xFFEA4335);
-    canvas.drawArc(innerRect, -2.8, 1.4, false, paint);
-
-    // Draw Yellow Segment (Left Arc)
-    paint.color = const Color(0xFFFBBC05);
-    canvas.drawArc(innerRect, -4.2, 1.4, false, paint);
-
-    // Draw Green Segment (Bottom Arc)
-    paint.color = const Color(0xFF34A853);
-    canvas.drawArc(innerRect, 0.4, 1.4, false, paint);
-
-    // Draw Blue Segment (Right Arc)
-    paint.color = const Color(0xFF4285F4);
-    canvas.drawArc(innerRect, -1.4, 1.8, false, paint);
-
-    // Draw Blue Horizontal Bar
-    final Paint barPaint = Paint()
+    // Paint for Blue Segment (#4285F4)
+    final Paint bluePaint = Paint()
       ..color = const Color(0xFF4285F4)
       ..style = PaintingStyle.fill
       ..isAntiAlias = true;
+
+    final Path bluePath = Path()
+      ..moveTo(s * 22.56, s * 12.25)
+      ..cubicTo(s * 22.56, s * 11.47, s * 22.49, s * 10.72, s * 22.36, s * 10.0)
+      ..lineTo(s * 12.0, s * 10.0)
+      ..lineTo(s * 12.0, s * 14.26)
+      ..lineTo(s * 17.92, s * 14.26)
+      ..cubicTo(s * 17.66, s * 15.63, s * 16.88, s * 16.79, s * 15.71, s * 17.57)
+      ..lineTo(s * 15.71, s * 20.34)
+      ..lineTo(s * 19.28, s * 20.34)
+      ..cubicTo(s * 21.36, s * 18.42, s * 22.56, s * 15.6, s * 22.56, s * 12.25)
+      ..close();
       
-    // The bar is centered vertically and extends to the right edge
-    canvas.drawRect(
-      Rect.fromLTRB(cx, cy - strokeWidth / 2, cx + r, cy + strokeWidth / 2),
-      barPaint,
-    );
+    canvas.drawPath(bluePath, bluePaint);
+
+    // Paint for Green Segment (#34A853)
+    final Paint greenPaint = Paint()
+      ..color = const Color(0xFF34A853)
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    final Path greenPath = Path()
+      ..moveTo(s * 12.0, s * 23.0)
+      ..cubicTo(s * 14.97, s * 23.0, s * 17.46, s * 22.02, s * 19.28, s * 20.34)
+      ..lineTo(s * 15.71, s * 17.57)
+      ..cubicTo(s * 14.73, s * 18.23, s * 13.48, s * 18.63, s * 12.0, s * 18.63)
+      ..cubicTo(s * 9.14, s * 18.63, s * 6.71, s * 16.7, s * 5.84, s * 14.1)
+      ..lineTo(s * 2.18, s * 14.1)
+      ..lineTo(s * 2.18, s * 16.94)
+      ..cubicTo(s * 3.99, s * 20.53, s * 7.7, s * 23.0, s * 12.0, s * 23.0)
+      ..close();
+
+    canvas.drawPath(greenPath, greenPaint);
+
+    // Paint for Yellow Segment (#FBBC05)
+    final Paint yellowPaint = Paint()
+      ..color = const Color(0xFFFBBC05)
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    final Path yellowPath = Path()
+      ..moveTo(s * 5.84, s * 14.09)
+      ..cubicTo(s * 5.62, s * 13.43, s * 5.49, s * 12.73, s * 5.49, s * 12.0)
+      ..cubicTo(s * 5.49, s * 11.27, s * 5.62, s * 10.57, s * 5.84, s * 9.91)
+      ..lineTo(s * 5.84, s * 7.06)
+      ..lineTo(s * 2.18, s * 7.06)
+      ..cubicTo(s * 1.43, s * 8.55, s * 1.0, s * 10.22, s * 1.0, s * 12.0)
+      ..cubicTo(s * 1.0, s * 13.78, s * 1.43, s * 15.45, s * 2.18, s * 16.94)
+      ..lineTo(s * 5.03, s * 14.72)
+      ..cubicTo(s * 4.81, s * 14.06, s * 4.68, s * 13.36, s * 4.68, s * 12.63)
+      ..close();
+
+    canvas.drawPath(yellowPath, yellowPaint);
+
+    // Paint for Red Segment (#EA4335)
+    final Paint redPaint = Paint()
+      ..color = const Color(0xFFEA4335)
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    final Path redPath = Path()
+      ..moveTo(s * 12.0, s * 5.38)
+      ..cubicTo(s * 13.62, s * 5.38, s * 15.06, s * 5.94, s * 16.21, s * 7.02)
+      ..lineTo(s * 19.36, s * 3.87)
+      ..cubicTo(s * 17.45, s * 2.09, s * 14.97, s * 1.0, s * 12.0, s * 1.0)
+      ..cubicTo(s * 7.7, s * 1.0, s * 3.99, s * 3.47, s * 2.18, s * 7.06)
+      ..lineTo(s * 5.84, s * 9.9)
+      ..cubicTo(s * 6.71, s * 7.3, s * 9.14, s * 5.38, s * 12.0, s * 5.38)
+      ..close();
+
+    canvas.drawPath(redPath, redPaint);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// A high-performance premium scale micro-animation on interaction
+class PremiumInteractiveScale extends StatefulWidget {
+  final Widget child;
+
+  const PremiumInteractiveScale({super.key, required this.child});
+
+  @override
+  State<PremiumInteractiveScale> createState() => _PremiumInteractiveScaleState();
+}
+
+class _PremiumInteractiveScaleState extends State<PremiumInteractiveScale> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      onPointerDown: (_) => setState(() => _isPressed = true),
+      onPointerUp: (_) => setState(() => _isPressed = false),
+      onPointerCancel: (_) => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.98 : 1.0,
+        duration: const Duration(milliseconds: 80),
+        curve: Curves.easeOut,
+        child: widget.child,
+      ),
+    );
+  }
 }

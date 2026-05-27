@@ -1,4 +1,4 @@
-# SafeTour
+# Safe Tour
 Urban safety intelligence for Indian cities.
 
 ## Structure
