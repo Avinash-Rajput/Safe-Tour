@@ -2,7 +2,6 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.future import select
-from sqlalchemy import func
 
 import sys
 import os
