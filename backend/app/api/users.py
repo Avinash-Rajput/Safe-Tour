@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 import re
 from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
@@ -43,7 +44,7 @@ class ContactCreate(BaseModel):
     @classmethod
     def validate_phone(cls, v: str) -> str:
         if not re.match(r"^\+91[6-9]\d{9}$", v):
-            raise ValueError("Invalid phone number. Must match pattern: ^+91[6-9] followed by 9 digits")
+            raise ValueError(r"Invalid phone number. Must match pattern: ^\+91[6-9]\d{9}$")
         return v
 
 class ContactResponse(BaseModel):
@@ -81,7 +82,14 @@ async def get_db_user(
 
 # --- Endpoints ---
 
-@router.post("/users/me", response_model=UserResponse)
+@router.post(
+    "/users/me",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        status.HTTP_200_OK: {"model": UserResponse, "description": "Existing user retrieved successfully."}
+    }
+)
 async def get_or_create_user(
     payload: UserCreate,
     response: Response,
@@ -111,12 +119,25 @@ async def get_or_create_user(
         photo_url=payload.photo_url,
         city=payload.city
     )
-    db.add(new_user)
-    await db.commit()
-    await db.refresh(new_user)
-    
-    response.status_code = status.HTTP_201_CREATED
-    return new_user
+    try:
+        db.add(new_user)
+        await db.commit()
+        await db.refresh(new_user)
+        response.status_code = status.HTTP_201_CREATED
+        return new_user
+    except IntegrityError:
+        await db.rollback()
+        # Query the user created in the concurrent transaction
+        stmt = select(User).where(User.firebase_uid == firebase_uid)
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
+        if user:
+            response.status_code = status.HTTP_200_OK
+            return user
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User could not be created due to database integrity constraint.",
+        )
 
 @router.get("/users/me", response_model=UserResponse)
 async def get_user_profile(user: User = Depends(get_db_user)):
@@ -180,11 +201,14 @@ async def delete_emergency_contact(
     user: User = Depends(get_db_user),
     db: AsyncSession = Depends(get_db)
 ):
-    stmt = select(EmergencyContact).where(EmergencyContact.id == contact_id)
+    stmt = select(EmergencyContact).where(
+        EmergencyContact.id == contact_id,
+        EmergencyContact.user_id == user.id
+    )
     result = await db.execute(stmt)
     contact = result.scalar_one_or_none()
     
-    if not contact or contact.user_id != user.id:
+    if not contact:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Contact not found",
