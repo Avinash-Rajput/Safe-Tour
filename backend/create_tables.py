@@ -1,3 +1,4 @@
+import asyncio
 from app.core.database import engine, Base
 
 from sqlalchemy import text
