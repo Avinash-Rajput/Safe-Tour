@@ -1,9 +1,9 @@
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    supabase_url: str = ""
-    supabase_service_key: str = ""
-    supabase_db_url: str = ""
+    supabase_url: str | None = None
+    supabase_service_key: str | None = None
+    supabase_db_url: str | None = None
     firebase_credentials_path: str = "firebase-service-account.json"
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""

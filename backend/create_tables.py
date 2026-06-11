@@ -1,5 +1,6 @@
 import asyncio
 from app.core.database import engine, Base
+import app.models.models  # Required to register models with Base.metadata
 
 from sqlalchemy import text
 

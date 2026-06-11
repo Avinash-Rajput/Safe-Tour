@@ -11,7 +11,7 @@ def get_supabase():
     return create_client(settings.supabase_url, settings.supabase_service_key)
 
 @router.get("/{city}")
-async def get_city_scores(city: str):
+def get_city_scores(city: str):
     if city not in SUPPORTED_CITIES:
         raise HTTPException(status_code=404, detail=f"{city} is not supported yet")
     try:
@@ -26,7 +26,7 @@ async def get_city_scores(city: str):
         raise HTTPException(status_code=503, detail="Scores temporarily unavailable")
 
 @router.get("/{city}/zone/{zone_id}")
-async def get_zone_score(city: str, zone_id: str):
+def get_zone_score(city: str, zone_id: str):
     if city not in SUPPORTED_CITIES:
         raise HTTPException(status_code=404, detail=f"{city} is not supported yet")
     try:

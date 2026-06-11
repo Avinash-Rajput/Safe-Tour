@@ -4,7 +4,7 @@ from app.core.firebase import verify_firebase_token
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
-async def get_current_user(
+def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ) -> dict:
     if not credentials:
