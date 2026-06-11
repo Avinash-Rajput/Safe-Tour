@@ -1,6 +1,10 @@
 # Safe Tour
 Urban safety intelligence for Indian cities.
 
+##Quick access
+Quick project video - Check the above "Video.mp4"
+Detailed project info - Check the above "Document.pdf"
+
 ## Structure
 - /mobile — Flutter Android app
 - /backend — FastAPI Python backend  
