@@ -1,5 +1,4 @@
 import pytest
-import asyncio
 from sqlalchemy import text
 from app.core.database import engine
 

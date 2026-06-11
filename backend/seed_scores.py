@@ -1,7 +1,5 @@
-import asyncio
 from supabase import create_client
 from app.core.config import settings
-import json
 import os
 
 def seed():

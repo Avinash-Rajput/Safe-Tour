@@ -1,6 +1,5 @@
-import asyncio
 from app.core.database import engine, Base
-from app.models.models import User, EmergencyContact, SosEvent, LiveSession, LocationPing
+
 from sqlalchemy import text
 
 async def create_all():
