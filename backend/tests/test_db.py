@@ -1,11 +1,13 @@
 import pytest
 from sqlalchemy import inspect
-from app.core.database import engine
+from app.core.database import engine, Base
+import app.models.models  # noqa: F401
 
 @pytest.mark.asyncio
 async def test_tables_exist():
     expected_tables = ["users", "emergency_contacts", "sos_events", "live_sessions", "location_pings"]
     async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
         def get_tables(sync_conn):
             return inspect(sync_conn).get_table_names()
         existing = await conn.run_sync(get_tables)
