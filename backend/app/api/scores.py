@@ -22,7 +22,7 @@ async def get_city_scores(city: str):
             content=scores,
             headers={"Cache-Control": "public, max-age=3600"}
         )
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=503, detail="Scores temporarily unavailable")
 
 @router.get("/{city}/zone/{zone_id}")
