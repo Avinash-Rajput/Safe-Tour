@@ -7,9 +7,11 @@ class Base(DeclarativeBase):
 
 def get_engine():
     db_url = settings.supabase_db_url
+    connect_args = {}
     if db_url and db_url.startswith("postgresql://"):
         db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    return create_async_engine(db_url or "sqlite+aiosqlite:///./test.db", echo=False)
+        connect_args = {"ssl": "require"}
+    return create_async_engine(db_url or "sqlite+aiosqlite:///./test.db", echo=False, connect_args=connect_args)
 
 engine = get_engine()
 AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)

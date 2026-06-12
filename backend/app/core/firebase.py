@@ -10,16 +10,24 @@ def init_firebase():
     if _firebase_initialized:
         return
     try:
+        firebase_json = os.environ.get("FIREBASE_CREDENTIALS_JSON")
         cred_path = settings.firebase_credentials_path
-        if os.path.exists(cred_path):
+        
+        if firebase_json:
+            import json
+            cred_dict = json.loads(firebase_json)
+            cred = credentials.Certificate(cred_dict)
+            firebase_admin.initialize_app(cred)
+        elif os.path.exists(cred_path):
             cred = credentials.Certificate(cred_path)
             firebase_admin.initialize_app(cred)
         else:
-            firebase_admin.initialize_app()
+            raise ValueError(f"Firebase credentials not found at {cred_path} and FIREBASE_CREDENTIALS_JSON is not set.")
+            
         _firebase_initialized = True
     except Exception as e:
-        print(f"Firebase init warning: {e}")
-        _firebase_initialized = True
+        print(f"Firebase init error: {e}")
+        raise
 
 def verify_firebase_token(token: str) -> dict:
     try:
