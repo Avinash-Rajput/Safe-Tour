@@ -25,7 +25,7 @@ class ApiService {
           final user = FirebaseAuth.instance.currentUser;
           if (user != null) {
             // Get Firebase ID token fresh on every request
-            final token = await user.getIdToken();
+            final token = await user.getIdToken(true);
             if (token != null) {
               options.headers['Authorization'] = 'Bearer $token';
             }
