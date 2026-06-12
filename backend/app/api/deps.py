@@ -15,7 +15,8 @@ def get_current_user(
     try:
         user = verify_firebase_token(credentials.credentials)
         return user
-    except ValueError:
+    except ValueError as e:
+        print(f"Token verification failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
